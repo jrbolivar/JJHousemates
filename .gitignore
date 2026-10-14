@@ -1,0 +1,4 @@
+# Boarder records stay off GitHub; they go into Firebase via the app's Import button.
+boarding_house_data*.json
+room_documents/
+*.exe

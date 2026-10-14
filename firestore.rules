@@ -1,0 +1,24 @@
+rules_version = '2';
+
+// Only the Google accounts listed below can read or change anything.
+// To give someone else access, add their Gmail address to the list and run
+//   firebase deploy --only firestore:rules
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+             'rtbolivar03@gmail.com'
+           ];
+    }
+
+    match /houses/{houseId} {
+      allow read, write: if isOwner();
+      match /{document=**} {
+        allow read, write: if isOwner();
+      }
+    }
+  }
+}
