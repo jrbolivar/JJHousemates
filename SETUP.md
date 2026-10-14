@@ -1,62 +1,48 @@
-# J&J Housemates Online — setup (GitHub Pages + Firebase)
+# J&J Housemates Online — setup (Firebase, free)
 
-Two free services, each doing one job:
+Firebase does all three jobs on its free **Spark** plan — no credit card needed:
 
-- **GitHub Pages** hosts the app itself (the files in `public/`).
-- **Firebase** holds the data and the Google sign-in, so PC and phones see the
-  same rooms and payments. GitHub cannot store the data — without Firebase the
-  app stays in demo mode, where each browser has its own separate copy.
+- **Hosting** serves the app at `https://<project-id>.web.app`
+- **Firestore** holds the rooms and payments, so PC and phones see the same data
+- **Authentication** handles the Google sign-in
 
-Nothing needs to be installed on this PC. Everything below is done in a browser.
+Until step 3 is done the app runs in **demo mode**, where each browser keeps its
+own separate copy of the data.
 
-## 1. Put the app on GitHub Pages
+## 1. Create the Firebase project (about 15 minutes)
 
-1. Sign in at https://github.com (create a free account if you have none).
-2. **+ (top right) → New repository.** Name: `housemates`. Visibility: **Public**
-   (free GitHub Pages needs a public repository). Tick **Add a README file**. **Create repository.**
-3. In the new repository: **Add file → Upload files.**
-4. Open the `public` folder on this PC, select **everything inside it**
-   (`index.html`, `sw.js`, `manifest.webmanifest`, and the `css`, `js`, `assets`
-   folders) and drag it all onto the upload page. **Commit changes.**
-   `index.html` must end up at the top level of the repository, not inside a `public` folder.
-5. **Settings → Pages → Build and deployment → Source: Deploy from a branch →
-   Branch: `main`, folder `/ (root)` → Save.**
-6. After a minute or two the page shows your address:
-   `https://<your-username>.github.io/housemates/`
-
-Open it — the app should load in **demo mode**. Hosting is done.
-
-**Upload only the contents of `public/`.** Never upload `boarding_house_data.json`
-or anything else from the Boarding House folder: a public repository is visible
-to everyone. Your records go into Firebase through the app's Import button instead.
-
-## 2. Create the Firebase project (about 15 minutes, free)
-
-1. https://console.firebase.google.com → **Add project** → name it (e.g. `jj-housemates`). Analytics can be off.
+1. https://console.firebase.google.com → **Create a project** → name it (e.g. `jj-housemates`).
+   Google Analytics can be off. Stay on the free Spark plan.
 2. **Build → Authentication → Get started → Sign-in method → Google → Enable → Save.**
-3. Still in Authentication: **Settings → Authorized domains → Add domain** →
-   `<your-username>.github.io`. Without this, sign-in is refused on your GitHub address.
-4. **Build → Firestore Database → Create database** → location
+3. **Build → Firestore Database → Create database** → location
    `asia-southeast1 (Singapore)` → **Start in production mode**.
-5. In Firestore, open the **Rules** tab, replace everything there with the
-   contents of `firestore.rules` from this folder, and click **Publish**.
-   These rules are what keep everyone except your listed Gmail addresses out.
-6. **Project settings (gear icon) → Your apps → Web (`</>`)** → register the app.
-   Firebase shows a `firebaseConfig` block with six values.
+4. **Project settings (gear icon) → General → Your apps → Web (`</>`)** → register the app
+   (leave "Also set up Firebase Hosting" unticked). Firebase shows a `firebaseConfig`
+   block with six values. Note the **Project ID** on the same page.
 
-## 3. Connect the app to Firebase
+## 2. Connect the app to Firebase
 
-1. On GitHub, open `js/firebase-config.js` in your repository → **pencil (Edit)**.
-2. Paste each of the six values between the matching empty quotes → **Commit changes.**
-3. Wait a minute, then reload your address. Instead of demo mode you should now
-   see **Sign in with Google**.
+Open `public/js/firebase-config.js` in Notepad, paste each of the six values between
+the matching empty quotes, and save.
 
-These config values are identifiers, not passwords — they are designed to be
-public. Access is controlled by the rules from step 2.5.
+These values are identifiers, not passwords — they are designed to be public.
+Access is controlled by `firestore.rules`, which only lets in the Gmail addresses
+listed there.
+
+## 3. Publish
+
+1. Install **Node.js** (LTS) from https://nodejs.org if this PC does not have it.
+2. Double-click **`DEPLOY.bat`**. It asks for your Project ID the first time,
+   opens a browser to sign in to Firebase, then uploads the app **and** the
+   Firestore security rules.
+3. When it finishes it shows your address: `https://<project-id>.web.app`
+
+No "authorized domains" step is needed — Firebase allows sign-in on its own
+`.web.app` and `.firebaseapp.com` addresses automatically.
 
 ## 4. First sign-in and import
 
-1. Open the address on your PC and **Sign in with Google**.
+1. Open your address on the PC and **Sign in with Google**.
 2. Choose **Import boarding_house_data.json** and pick the file from
    `Boarding House EXE (version2)`. Rooms, boarders, payments, bill history and
    past tenants come across. Email/SMS passwords and API keys are **not** uploaded.
@@ -65,19 +51,24 @@ public. Access is controlled by the rules from step 2.5.
 
 ## Who can get in
 
-Only the Gmail addresses listed in the Firestore rules. To add Jun, Janeth or a
-caretaker: Firebase console → Firestore → **Rules**, add their address to the
-list (comma-separated, each in quotes), **Publish**.
+Only the Gmail addresses listed in `firestore.rules`. To add Jun, Janeth or a
+caretaker: open `firestore.rules` in Notepad, add their address to the list
+(comma-separated, each in quotes), save, and run `DEPLOY.bat` again.
 
 ## Updating the app later
 
-Upload the changed file to the same place in the repository (**Add file →
-Upload files**, it replaces the old one). Devices pick up the new version on
-their next load.
+Change the files, then run `DEPLOY.bat` again. Phones and PCs pick up the new
+version on their next load.
 
 ## Try it on this PC without any accounts
 
 Double-click `PREVIEW.bat` — the app opens at http://localhost:8080 in demo mode.
+
+## Free plan limits
+
+Far above what one boarding house uses: 50,000 database reads and 20,000 writes
+per day, 10 GB of hosting storage and 360 MB of downloads per day. If a limit were ever hit, the app
+pauses until the next day — nothing is charged on the Spark plan.
 
 ## Not carried over from the PC app (yet)
 
