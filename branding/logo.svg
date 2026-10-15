@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect width="1000" height="1000" fill="#ffffff"/>
+  <g fill="none" stroke="#2f7f82" stroke-width="32" stroke-linejoin="miter" stroke-linecap="butt">
+    <!-- outer roof -->
+    <path d="M140 490 L500 160 L860 490"/>
+    <!-- chimney -->
+    
+    <!-- inner roof, right wall, floor -->
+    <path d="M300 429 L500 245 L745 470 V800 H415"/>
+    <!-- j j -->
+    <path d="M275 535 V735 Q275 775 235 775 H220"/>
+    <path d="M350 535 V760 Q350 815 295 815 H275"/>
+    <!-- chair, table, chair -->
+    <path d="M445 605 V735 H500"/>
+    <path d="M520 650 H610 M565 650 V735"/>
+    <path d="M685 605 V735 H630"/>
+  </g>
+  <g fill="#2f7f82">
+    <polygon points="625,262 625,190 715,190 715,345"/>
+    <circle cx="275" cy="487" r="21"/>
+    <circle cx="350" cy="487" r="21"/>
+    <!-- window -->
+    <rect x="461" y="356" width="34" height="34"/><rect x="505" y="356" width="34" height="34"/>
+    <rect x="461" y="400" width="34" height="34"/><rect x="505" y="400" width="34" height="34"/>
+  </g>
+</svg>
