@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#11b5a4">
+  <meta name="description" content="Count your steps and walk together with friends.">
+  <title>StepMates</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-phase="loading">
+  <div id="gate"></div>
+
+  <div id="app" hidden>
+    <header class="top">
+      <img src="assets/logo.svg" alt="" width="34" height="34">
+      <span class="wordmark">Step<b>Mates</b></span>
+      <span id="mode" class="pill" title="Firebase isn't set up yet, so friends are pretend">Demo</span>
+    </header>
+    <main id="view"></main>
+    <nav class="nav">
+      <a href="#/today"   data-nav="today"><i>👣</i><span>Today</span></a>
+      <a href="#/friends" data-nav="friends"><i>🏆</i><span>Friends</span></a>
+      <a href="#/connect" data-nav="connect"><i>⌚</i><span>Connect</span></a>
+      <a href="#/me"      data-nav="me"><i>🙂</i><span>Me</span></a>
+    </nav>
+  </div>
+
+  <dialog id="dialog"></dialog>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

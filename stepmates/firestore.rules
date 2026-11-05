@@ -1,0 +1,67 @@
+rules_version = '2';
+
+// Anyone with a Google account can sign in and use StepMates.
+// - Your own profile and step history are private to you.
+// - A group's leaderboard is visible only to that group's members.
+// - You can only write your own steps, and only add or remove yourself from a group.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && me() == uid;
+      match /days/{date} {
+        allow read, write: if signedIn() && me() == uid
+          && (request.resource == null || (request.resource.data.steps is int
+              && request.resource.data.steps >= 0 && request.resource.data.steps <= 200000));
+      }
+    }
+
+    match /groups/{code} {
+      function isMember() { return me() in resource.data.members; }
+      function onlyChanged(keys) {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+      }
+      function onlyMyName() {
+        return !('names' in request.resource.data.diff(resource.data).affectedKeys())
+          || request.resource.data.names.diff(resource.data.names).affectedKeys().hasOnly([me()]);
+      }
+
+      // Knowing the 6-letter code is what lets you see and join a group.
+      allow get: if signedIn();
+      allow list: if signedIn() && isMember();
+
+      allow create: if signedIn()
+        && request.resource.data.owner == me()
+        && request.resource.data.members == [me()]
+        && request.resource.data.name is string && request.resource.data.name.size() <= 40;
+
+      allow update: if signedIn() && onlyChanged(['members', 'names']) && onlyMyName() && (
+          // join: add only myself
+          (!isMember()
+            && request.resource.data.members.hasAll(resource.data.members)
+            && request.resource.data.members.size() == resource.data.members.size() + 1
+            && me() in request.resource.data.members)
+          // leave: remove only myself
+          || (isMember()
+            && resource.data.members.hasAll(request.resource.data.members)
+            && request.resource.data.members.size() == resource.data.members.size() - 1
+            && !(me() in request.resource.data.members))
+          // rename myself
+          || (isMember() && request.resource.data.members == resource.data.members)
+        );
+
+      allow delete: if signedIn() && resource.data.owner == me();
+
+      match /steps/{uid} {
+        function groupMembers() { return get(/databases/$(database)/documents/groups/$(code)).data.members; }
+        allow read: if signedIn() && me() in groupMembers();
+        allow create, update: if signedIn() && me() == uid && me() in groupMembers();
+        // Your own row can always be removed (needed when leaving).
+        allow delete: if signedIn() && me() == uid;
+      }
+    }
+  }
+}
