@@ -1,0 +1,21 @@
+{
+  "name": "stepmates",
+  "version": "1.0.0",
+  "private": true,
+  "description": "StepMates phone app (iPhone + Android). The app itself is the web app in public/, wrapped by Capacitor.",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap sync android && cap open android",
+    "ios": "cap sync ios && cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.6.0",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.6.0",
+    "@capacitor/ios": "8.6.0",
+    "@capgo/capacitor-health": "8.11.13"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.6.0"
+  }
+}

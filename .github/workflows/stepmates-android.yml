@@ -1,0 +1,61 @@
+# Builds the StepMates Android app whenever stepmates/ changes.
+# Download it from: GitHub → Actions → "StepMates Android app" → latest run → Artifacts,
+# or from the "StepMates Android" release, which always holds the newest StepMates.apk.
+name: StepMates Android app
+
+on:
+  push:
+    paths: ["stepmates/**", ".github/workflows/stepmates-android.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stepmates
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install packages
+        run: npm ci
+      - name: Copy the app into the Android project
+        run: npx cap sync android
+      - name: Signing key (optional, from repository secrets)
+        env:
+          KEYSTORE_B64: ${{ secrets.STEPMATES_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/stepmates.keystore"
+            echo "STEPMATES_KEYSTORE_FILE=$RUNNER_TEMP/stepmates.keystore" >> "$GITHUB_ENV"
+          else
+            echo "No STEPMATES_KEYSTORE_BASE64 secret: signing with a one-off key."
+          fi
+      - name: Build
+        working-directory: stepmates/android
+        env:
+          STEPMATES_KEYSTORE_PASSWORD: ${{ secrets.STEPMATES_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon
+      - name: Name the file
+        run: cp android/app/build/outputs/apk/release/app-release.apk StepMates.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: StepMates-android
+          path: stepmates/StepMates.apk
+      - name: Publish as the "StepMates Android" release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: stepmates-android
+          name: StepMates Android
+          body: "Newest StepMates app for Android. On your phone: download StepMates.apk, open it, allow installing from this source, then Install."
+          files: stepmates/StepMates.apk
+          make_latest: false

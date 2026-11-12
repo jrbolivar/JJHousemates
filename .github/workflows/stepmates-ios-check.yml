@@ -1,0 +1,30 @@
+# Checks that the StepMates iPhone project still compiles (no signing, simulator only).
+# Runs when the iOS project changes, or by hand from the Actions tab.
+# macOS minutes cost more on private repos, so it doesn't run on every change.
+name: StepMates iPhone build check
+
+on:
+  push:
+    paths: ["stepmates/ios/**", "stepmates/package.json", ".github/workflows/stepmates-ios-check.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: stepmates
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npx cap sync ios
+      - name: Build for the simulator
+        run: >
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug
+          -sdk iphonesimulator -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO build | tail -40
+          ; exit ${PIPESTATUS[0]}
+        shell: bash

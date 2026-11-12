@@ -1,7 +1,7 @@
 // Offline support: keeps the app shell available with no connection.
 // Network-first so a new deploy shows up on the next load; cache is the fallback.
-const CACHE = "stepmates-v1";
-const SHELL = ["./", "index.html", "css/styles.css", "js/app.js", "js/store.js", "js/pedometer.js",
+const CACHE = "stepmates-v2";
+const SHELL = ["./", "index.html", "css/styles.css", "js/app.js", "js/store.js", "js/pedometer.js", "js/health.js",
                "js/firebase-config.js", "manifest.webmanifest", "assets/logo.svg", "assets/icon-192.png"];
 
 self.addEventListener("install", e => {

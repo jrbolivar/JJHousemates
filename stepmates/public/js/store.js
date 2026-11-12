@@ -92,7 +92,7 @@ const local = {
     refreshLocal(); return code;
   },
   async leaveGroup(code) { delete state.groups[code]; delete state.boards[code]; refreshLocal(); },
-  async signIn() {}, async signOut() {},
+  async signIn() {}, async signOut() {}, async signInEmail() {}, async resetPassword() {},
 };
 
 // ── cloud back end ─────────────────────────────────────────────
@@ -186,6 +186,18 @@ const cloud = {
     await fs.updateDoc(fs.doc(db, "groups", code), { members: fs.arrayRemove(uid), ["names." + uid]: fs.deleteField() });
   },
   async signIn() { await au.signInWithPopup(auth, new au.GoogleAuthProvider()); },
+  async signInEmail(email, password, create, name) {
+    if (create) {
+      const cred = await au.createUserWithEmailAndPassword(auth, email, password);
+      if (name) {
+        await au.updateProfile(cred.user, { displayName: name });
+        await fs.setDoc(fs.doc(db, "users", cred.user.uid), { name }, { merge: true });
+      }
+    } else {
+      await au.signInWithEmailAndPassword(auth, email, password);
+    }
+  },
+  async resetPassword(email) { await au.sendPasswordResetEmail(auth, email); },
   async signOut() { stopAll(); await au.signOut(auth); },
 };
 
@@ -194,7 +206,10 @@ async function initCloud() {
     import(FB + "firebase-app.js"), import(FB + "firebase-auth.js"), import(FB + "firebase-firestore.js")]);
   au = authMod; fs = fsMod;
   const app = appMod.initializeApp(firebaseConfig);
-  auth = au.getAuth(app);
+  // Inside the installed app, getAuth() can hang on iPhone; set storage explicitly.
+  auth = window.Capacitor?.isNativePlatform?.()
+    ? au.initializeAuth(app, { persistence: au.indexedDBLocalPersistence })
+    : au.getAuth(app);
   db = fs.initializeFirestore(app, { localCache: fs.persistentLocalCache() });
   au.onAuthStateChanged(auth, user => {
     if (!user) {
@@ -202,7 +217,7 @@ async function initCloud() {
       Object.assign(state, { phase: "signin", user: null, days: {}, groups: {}, boards: {} });
       return emit();
     }
-    state.user = { uid: user.uid, name: user.displayName || "Walker", photo: user.photoURL || "" };
+    state.user = { uid: user.uid, name: user.displayName || "Walker", photo: user.photoURL || "", email: user.email || "" };
     state.profile = { name: state.user.name, goal: 10000 };
     state.phase = "loading"; emit();
     listen(user.uid);
@@ -212,6 +227,20 @@ async function initCloud() {
 const backend = () => (state.mode === "cloud" ? cloud : local);
 export const actions = {
   setSteps: (date, steps, src = "manual") => backend().setSteps(date, Math.max(0, Math.round(steps)), src),
+  // Phone sync: only write days whose total changed, to keep database writes low.
+  async syncDays(list, src) {
+    let changed = 0;
+    for (const { date, steps } of list) {
+      const cur = state.days[date];
+      if (steps <= 0 || (cur && cur.steps === steps && cur.src === src)) continue;
+      // Never lower a day someone added by hand or with Walk mode.
+      if (cur && cur.src !== src && cur.steps > steps) continue;
+      await backend().setSteps(date, steps, src); changed++;
+    }
+    return changed;
+  },
+  signInEmail: (email, password, create, name) => backend().signInEmail(email.trim(), password, create, name),
+  resetPassword: email => backend().resetPassword(email.trim()),
   saveProfile: p => backend().saveProfile(p),
   createGroup: name => backend().createGroup(name),
   joinGroup: code => backend().joinGroup(code.trim().toUpperCase()),

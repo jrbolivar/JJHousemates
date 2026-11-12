@@ -1,0 +1,8 @@
+{
+  "appId": "app.stepmates.family",
+  "appName": "StepMates",
+  "webDir": "public",
+  "backgroundColor": "#f3f7f8",
+  "android": { "allowMixedContent": false },
+  "ios": { "contentInset": "never" }
+}

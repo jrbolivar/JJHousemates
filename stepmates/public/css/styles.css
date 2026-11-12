@@ -1,4 +1,7 @@
 :root {
+  /* Safe areas: env() on iPhone/browsers, --safe-area-inset-* from Capacitor on Android. */
+  --sat: max(env(safe-area-inset-top), var(--safe-area-inset-top, 0px));
+  --sab: max(env(safe-area-inset-bottom), var(--safe-area-inset-bottom, 0px));
   --bg: #f3f7f8; --card: #ffffff; --ink: #0f2a3d; --muted: #5b7184; --line: #e2eaee;
   --brand: #11b5a4; --brand2: #0b8bd9; --brand-soft: #dff6f2; --hit: #2ecc8f; --danger: #d64545;
   --shadow: 0 1px 2px rgba(15, 42, 61, .06), 0 6px 20px rgba(15, 42, 61, .06);
@@ -25,14 +28,14 @@ a { color: var(--brand); }
 .error { color: var(--danger); }
 
 /* ── shell ── */
-#app { max-width: 560px; margin: 0 auto; padding: 0 16px calc(84px + env(safe-area-inset-bottom)); }
-.top { display: flex; align-items: center; gap: 10px; padding: calc(14px + env(safe-area-inset-top)) 0 10px; }
+#app { max-width: 560px; margin: 0 auto; padding: 0 16px calc(84px + var(--sab)); }
+.top { display: flex; align-items: center; gap: 10px; padding: calc(14px + var(--sat)) 0 10px; }
 .wordmark { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; }
 .wordmark b { color: var(--brand); }
 .pill { margin-left: auto; font-size: .75rem; padding: 3px 10px; border-radius: 99px; background: var(--brand-soft); color: var(--brand); font-weight: 600; }
 .nav {
   position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: center;
-  background: var(--card); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); z-index: 5;
+  background: var(--card); border-top: 1px solid var(--line); padding-bottom: var(--sab); z-index: 5;
 }
 .nav a { flex: 1; max-width: 140px; display: flex; flex-direction: column; align-items: center; padding: 8px 0 10px;
          text-decoration: none; color: var(--muted); font-size: .75rem; font-weight: 600; }
@@ -135,7 +138,16 @@ dialog { border: 0; border-radius: 20px; padding: 20px; width: min(420px, calc(1
 dialog::backdrop { background: rgba(8, 20, 28, .5); }
 .walk-count { font-size: 4rem; font-weight: 800; color: var(--brand); font-variant-numeric: tabular-nums; }
 .toast {
-  position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  position: fixed; left: 50%; bottom: calc(90px + var(--sab)); transform: translateX(-50%);
   background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; z-index: 20;
   max-width: calc(100vw - 32px); text-align: center;
 }
+
+/* ── phone app & sign-in ── */
+.sync-line { border: 0; background: var(--brand-soft); color: var(--brand); font: inherit; font-size: .85rem; font-weight: 700;
+             padding: 6px 12px; border-radius: 99px; margin: 4px auto 0; cursor: pointer; min-height: 32px; }
+.btn.wide { margin-top: 10px; }
+.stack.wide { width: 100%; }
+.gate-box .or { margin: 10px 0 0; }
+.row.links { justify-content: center; gap: 16px; margin-top: 4px; }
+.link { border: 0; background: none; color: var(--brand); font: inherit; font-weight: 600; padding: 10px 4px; cursor: pointer; }

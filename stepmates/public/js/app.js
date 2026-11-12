@@ -1,11 +1,16 @@
 import { state, subscribe, actions, start, today, addDays, cloudEnabled } from "./store.js";
 import * as pedo from "./pedometer.js";
+import * as phone from "./health.js";
+import { firebaseConfig } from "./firebase-config.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = n => Math.round(n || 0).toLocaleString();
-const appUrl = () => location.origin + location.pathname;
-const SRC = { manual: "Typed in", apple: "Apple Health", walk: "Walk mode", garmin: "Garmin", fitbit: "Fitbit", samsung: "Samsung Health", google: "Google Fit" };
+// Links people share must point at the website, even when sent from the installed app.
+const appUrl = () => phone.isNative()
+  ? (firebaseConfig.projectId ? `https://${firebaseConfig.projectId}.web.app/` : "https://stepmates.web.app/")
+  : location.origin + location.pathname;
+const SRC = { manual: "Typed in", apple: "Apple Health", healthconnect: "Health Connect", walk: "Walk mode", garmin: "Garmin", fitbit: "Fitbit", samsung: "Samsung Health", google: "Google Fit" };
 
 let toastTimer;
 function toast(msg) {
@@ -78,8 +83,11 @@ function viewToday() {
       <div class="ring-text"><b>${fmt(steps)}</b><span>of ${fmt(goal)} steps</span></div>
     </div>
     <p class="muted">${steps >= goal ? "🎉 Goal reached today!" : `${fmt(goal - steps)} to go`}${src ? ` · from ${esc(SRC[src] || src)}` : ""}</p>
+    ${phone.isNative() ? (phone.wasConnected()
+      ? `<button class="sync-line" data-act="sync">${syncing ? "Syncing…" : `↻ ${esc(phone.sourceName())}${lastSync ? ` · synced ${timeAgo(lastSync)}` : ""}`}</button>`
+      : `<button class="btn primary wide" data-act="connect">Connect ${esc(phone.sourceName())}</button>`) : ""}
     <div class="row">
-      <button class="btn primary" data-act="edit-today">✏️ Add steps</button>
+      <button class="btn ${phone.isNative() ? "" : "primary"}" data-act="edit-today">✏️ Add steps</button>
       <button class="btn" data-act="walk">👟 Walk now</button>
     </div>
   </section>
@@ -103,7 +111,7 @@ function viewToday() {
 }
 
 let boardRange = "week";
-let lastHash = null;
+let lastHash = null, lastGate = "";
 function boardRows(code) {
   const board = state.boards[code] || {}, t = today(), dates = boardRange === "today" ? [t] : weekDates();
   return Object.entries(board)
@@ -165,12 +173,49 @@ function viewFriends(code) {
   </section>`;
 }
 
-function viewConnect() {
-  const example = `${appUrl()}#add?src=apple&steps=8421`;
+function viewPhoneConnect() {
+  const ios = phone.platform() === "ios", name = phone.sourceName(), on = phone.wasConnected();
   return `
   <section class="card">
-    <h2>Bring in your steps</h2>
-    <p class="muted">StepMates is a web app, so it can't read your phone's health data directly. These are the ways to get your count in today:</p>
+    <h2>${esc(name)}</h2>
+    <p class="muted">${on ? `Connected. Steps sync every time you open StepMates${lastSync ? ` · last synced ${timeAgo(lastSync)}` : ""}.`
+      : `Let StepMates read your daily step count. It reads steps only — nothing else from your health data.`}</p>
+    <div class="row">
+      ${on ? `<button class="btn primary" data-act="sync">${syncing ? "Syncing…" : "Sync now"}</button>
+              ${ios ? "" : `<button class="btn" data-act="hc-settings">Permissions</button>`}`
+           : `<button class="btn primary" data-act="connect">Connect ${esc(name)}</button>`}
+    </div>
+  </section>
+  <section class="card guide">
+    <h2>Garmin watch?</h2>
+    <p>Let Garmin Connect pass your steps to ${esc(name)} once:</p>
+    <ol>${ios ? `
+      <li>Open <b>Garmin Connect</b> → <b>More</b> (☰) → <b>Settings</b> → <b>Connected Apps</b> → <b>Apple Health</b>.</li>
+      <li>Turn on <b>Steps</b>.</li>` : `
+      <li>Open <b>Garmin Connect</b> → <b>More</b> (☰) → <b>Settings</b> → <b>Connected Apps</b> → <b>Health Connect</b>.</li>
+      <li>Allow Garmin Connect to write <b>Steps</b>.</li>
+      <li>Optional: in <b>Health Connect → Data and access → Steps → Data sources</b>, put <b>Garmin Connect</b> first so watch steps win over phone steps.</li>`}
+      <li>Sync your watch in Garmin Connect, then open StepMates.</li>
+    </ol>
+    <p class="muted small">${ios ? "Apple Watch, Oura, Withings and Polar also write to Apple Health." : "Fitbit, Samsung Health, Oura and Withings also write to Health Connect."}</p>
+  </section>
+  <section class="card guide">
+    <h2>No watch?</h2>
+    <p class="muted">Your phone counts steps on its own when it's in your pocket. Or use <b>Walk now</b> on the Today screen.</p>
+  </section>`;
+}
+
+function viewConnect() {
+  if (phone.isNative()) return viewPhoneConnect();
+  const example = `${appUrl()}#add?src=apple&steps=8421`;
+  return `
+  <section class="card cta">
+    <h2>Get the app</h2>
+    <p class="muted">The StepMates phone app reads your steps from Apple Health or Health Connect automatically — including Garmin watches.</p>
+  </section>
+  <section class="card">
+    <h2>Using the website instead?</h2>
+    <p class="muted">A website can't read your phone's health data directly. These are the ways to get your count in:</p>
   </section>
 
   <details class="card guide" open>
@@ -210,7 +255,7 @@ function viewMe() {
   <section class="card">
     <div class="me-head">
       ${state.user.photo ? `<img class="avatar big" src="${esc(state.user.photo)}" alt="">` : `<span class="avatar big">${initials(p.name || "You")}</span>`}
-      <div><b>${esc(p.name)}</b><div class="muted">${state.mode === "cloud" ? "Signed in with Google" : "Demo mode — this browser only"}</div></div>
+      <div><b>${esc(p.name)}</b><div class="muted">${state.mode === "cloud" ? `Signed in${state.user.email ? " as " + esc(state.user.email) : ""}` : "Demo mode — this browser only"}</div></div>
     </div>
     <form data-form="profile" class="stack">
       <label>Name your friends see <input name="name" value="${esc(p.name)}" maxlength="30" required></label>
@@ -219,7 +264,7 @@ function viewMe() {
     </form>
   </section>
   ${state.mode === "cloud" ? `<button class="btn wide" data-act="signout">Sign out</button>` :
-    `<p class="card muted small">Demo mode: the friends you see are pretend. Once the Firebase project is set up (SETUP.md), everyone signs in with Google and sees each other's real steps.</p>`}
+    `<p class="card muted small">Demo mode: the friends you see are pretend. Once the Firebase project is set up (SETUP.md), everyone signs in and sees each other's real steps.</p>`}
   <p class="muted small center">StepMates · Your daily steps are shared only with groups you join.</p>`;
 }
 
@@ -273,6 +318,68 @@ async function invite(code) {
   await run(() => navigator.clipboard.writeText(`${text}\n${url}`), "Invite link copied — paste it in a message");
 }
 
+// ── phone health sync ──────────────────────────────────────────
+let syncing = false, lastSync = 0;
+const timeAgo = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : `${Math.round(m / 60)} h ago`; };
+async function syncPhone({ quiet = false } = {}) {
+  if (!phone.isNative() || state.phase !== "ready" || syncing) return;
+  syncing = true; render();
+  try {
+    const days = await phone.readDays(7);
+    const changed = await actions.syncDays(days, phone.platform() === "ios" ? "apple" : "healthconnect");
+    lastSync = Date.now();
+    if (!quiet) toast(changed ? `Synced ${changed} day${changed > 1 ? "s" : ""} from ${phone.sourceName()}` : "Already up to date");
+  } catch (e) { console.error(e); if (!quiet) toast(e.message || String(e)); }
+  syncing = false; render();
+}
+async function connectPhone() {
+  const res = await run(() => phone.connect());
+  if (!res) return;
+  if (!res.ok) return toast(res.reason);
+  await syncPhone();
+}
+// Sync when the app opens and every time it comes back to the front.
+let autoSynced = false;
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && phone.wasConnected() && Date.now() - lastSync > 60000) syncPhone({ quiet: true });
+});
+
+// ── sign-in form ───────────────────────────────────────────────
+let authMode = "signin";
+function gateHtml() {
+  const create = authMode === "create";
+  return `
+  <div class="gate-box">
+    <img src="assets/logo.svg" alt="" width="112" height="112">
+    <h1>StepMates</h1>
+    <p class="muted">Walk together. Count together.</p>
+    ${pendingLink?.startsWith("#join=") ? `<p class="muted small">Sign in to join your friend's group.</p>` : ""}
+    ${phone.isNative() ? "" : `<button class="btn primary wide" data-act="signin">Sign in with Google</button>
+      <p class="muted small or">or with email</p>`}
+    <form data-form="auth" class="stack wide">
+      ${create ? `<input name="name" placeholder="Your name" autocomplete="name" maxlength="30" required>` : ""}
+      <input name="email" type="email" placeholder="Email" autocomplete="email" required>
+      <input name="password" type="password" placeholder="Password (6+ characters)" minlength="6"
+             autocomplete="${create ? "new-password" : "current-password"}" required>
+      <button class="btn ${phone.isNative() ? "primary" : ""} wide">${create ? "Create account" : "Sign in"}</button>
+    </form>
+    <div class="row links">
+      <button class="link" data-act="auth-mode">${create ? "I already have an account" : "Create an account"}</button>
+      ${create ? "" : `<button class="link" data-act="forgot">Forgot password?</button>`}
+    </div>
+    ${state.error ? `<p class="error">${esc(state.error)}</p>` : ""}
+  </div>`;
+}
+const AUTH_ERRORS = {
+  "auth/invalid-credential": "Wrong email or password.",
+  "auth/wrong-password": "Wrong email or password.",
+  "auth/user-not-found": "No account with that email. Tap “Create an account”.",
+  "auth/email-already-in-use": "That email already has an account. Sign in instead.",
+  "auth/weak-password": "Use at least 6 characters for the password.",
+  "auth/invalid-email": "That email address doesn't look right.",
+  "auth/too-many-requests": "Too many tries. Wait a minute and try again.",
+};
+
 // ── events ─────────────────────────────────────────────────────
 document.addEventListener("click", async e => {
   const el = e.target.closest("[data-act]");
@@ -291,6 +398,15 @@ document.addEventListener("click", async e => {
   }
   else if (act === "copy") run(() => navigator.clipboard.writeText(el.dataset.text), "Copied");
   else if (act === "signin") run(() => actions.signIn());
+  else if (act === "sync") syncPhone();
+  else if (act === "connect") connectPhone();
+  else if (act === "hc-settings") run(() => phone.openSettings());
+  else if (act === "auth-mode") { authMode = authMode === "create" ? "signin" : "create"; lastGate = ""; render(); }
+  else if (act === "forgot") {
+    const email = $("[data-form=auth] [name=email]")?.value.trim();
+    if (!email) return toast("Type your email first, then tap “Forgot password?”");
+    run(() => actions.resetPassword(email), "Password reset email sent");
+  }
   else if (act === "signout") run(() => actions.signOut());
 });
 document.addEventListener("submit", async e => {
@@ -304,6 +420,12 @@ document.addEventListener("submit", async e => {
   } else if (form.dataset.form === "join") {
     const code = await run(() => actions.joinGroup(fd.get("code")), "You joined the group!");
     if (code) location.hash = "#/friends/" + code;
+  } else if (form.dataset.form === "auth") {
+    const btn = form.querySelector("button"); btn.disabled = true;
+    try {
+      await actions.signInEmail(fd.get("email"), fd.get("password"), authMode === "create", (fd.get("name") || "").trim());
+    } catch (err) { toast(AUTH_ERRORS[err.code] || err.message); }
+    btn.disabled = false;
   } else if (form.dataset.form === "profile") {
     run(() => actions.saveProfile({ name: fd.get("name").trim(), goal: Number(fd.get("goal")) }), "Saved");
   }
@@ -315,17 +437,14 @@ function render() {
   const gate = $("#gate"), app = $("#app");
   if (state.phase !== "ready") {
     app.hidden = true; gate.hidden = false;
-    gate.innerHTML = state.phase === "signin" ? `
-      <div class="gate-box">
-        <img src="assets/logo.svg" alt="" width="112" height="112">
-        <h1>StepMates</h1>
-        <p class="muted">Walk together. Count together.</p>
-        <button class="btn primary wide" data-act="signin">Sign in with Google</button>
-        ${pendingLink?.startsWith("#join=") ? `<p class="muted small">Sign in to join your friend's group.</p>` : ""}
-        ${state.error ? `<p class="error">${esc(state.error)}</p>` : ""}
-      </div>` : `<div class="gate-box"><img src="assets/logo.svg" alt="" width="96" height="96" class="pulse"></div>`;
+    const html = state.phase === "signin" ? gateHtml()
+      : `<div class="gate-box"><img src="assets/logo.svg" alt="" width="96" height="96" class="pulse"></div>`;
+    // Re-drawing would wipe what someone is typing.
+    if (html !== lastGate) { gate.innerHTML = html; lastGate = html; }
     return;
   }
+  lastGate = "";
+  if (!autoSynced && phone.wasConnected()) { autoSynced = true; setTimeout(() => syncPhone({ quiet: true }), 0); }
   gate.hidden = true; app.hidden = false;
   // Don't wipe a form someone is typing in when a friend's steps update.
   const typing = document.activeElement?.closest?.("#view form");
@@ -343,4 +462,4 @@ captureLink();
 window.addEventListener("hashchange", () => { captureLink(); render(); });
 subscribe(render);
 start();
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+if (!phone.isNative() && "serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
