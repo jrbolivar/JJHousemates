@@ -5,10 +5,10 @@
 // steps stay in this one browser.
 
 export const firebaseConfig = {
-  apiKey:            "",
-  authDomain:        "",
-  projectId:         "",
-  storageBucket:     "",
-  messagingSenderId: "",
-  appId:             "",
+  apiKey:            "AIzaSyCgPOnWXLY7mMhhd2-i61TJ33bcYtZ9gFo",
+  authDomain:        "stepmates-d56b8.firebaseapp.com",
+  projectId:         "stepmates-d56b8",
+  storageBucket:     "stepmates-d56b8.firebasestorage.app",
+  messagingSenderId: "858962083746",
+  appId:             "1:858962083746:web:c542631c3920f171dfbcfb",
 };
