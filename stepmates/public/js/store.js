@@ -41,7 +41,10 @@ const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(6)),
 const DEMO_FRIENDS = [["d1", "Jun"], ["d2", "Janeth"], ["d3", "Mika"], ["d4", "Paolo"]];
 function demoBoard(code, me) {
   const board = {};
+  // Pretend friends only appear in groups they belong to, not ones you create.
+  const members = state.groups[code]?.members || [];
   DEMO_FRIENDS.forEach(([uid, name], i) => {
+    if (!members.includes(uid)) return;
     const days = {};
     for (let k = 0; k < 35; k++) {
       const date = addDays(today(), -k);
