@@ -11,8 +11,17 @@ export const isNative = () => !!cap()?.isNativePlatform?.();
 export const platform = () => (isNative() ? cap().getPlatform() : "web"); // ios | android | web
 export const sourceName = () => (platform() === "ios" ? "Apple Health" : "Health Connect");
 
-let plugin = null;
-const health = () => (plugin ??= cap().registerPlugin("Health"));
+// Call the native Health plugin through the bridge the app shell injects.
+// (registerPlugin only exists when Capacitor's JS library is bundled, which this app doesn't do.)
+const call = (method, options = {}) => cap().registerPlugin
+  ? cap().registerPlugin("Health")[method](options)
+  : cap().nativePromise("Health", method, options);
+const health = () => ({
+  isAvailable: () => call("isAvailable"),
+  requestAuthorization: o => call("requestAuthorization", o),
+  queryAggregated: o => call("queryAggregated", o),
+  openHealthConnectSettings: () => call("openHealthConnectSettings"),
+});
 
 const CONNECTED_KEY = "stepmates_health_on";
 export const wasConnected = () => { try { return localStorage.getItem(CONNECTED_KEY) === "1"; } catch { return false; } };
