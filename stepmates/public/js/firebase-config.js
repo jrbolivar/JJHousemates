@@ -15,7 +15,7 @@ export const firebaseConfig = {
 
 // Where the website version lives (used for invite links sent from the phone app).
 // Leave empty to use the Firebase address https://<projectId>.web.app/
-export const siteUrl = "";
+export const siteUrl = "https://stepmates.rtbolivar03.workers.dev/";
 
 // Show "Sign in with Google" on the website. Needs the Google provider enabled in
 // Firebase Authentication and the website's domain added under Authorized domains.
