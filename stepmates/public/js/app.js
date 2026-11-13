@@ -1,14 +1,14 @@
 import { state, subscribe, actions, start, today, addDays, cloudEnabled } from "./store.js";
 import * as pedo from "./pedometer.js";
 import * as phone from "./health.js";
-import { firebaseConfig } from "./firebase-config.js";
+import { firebaseConfig, siteUrl, googleSignIn } from "./firebase-config.js";
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmt = n => Math.round(n || 0).toLocaleString();
 // Links people share must point at the website, even when sent from the installed app.
 const appUrl = () => phone.isNative()
-  ? (firebaseConfig.projectId ? `https://${firebaseConfig.projectId}.web.app/` : "https://stepmates.web.app/")
+  ? (siteUrl ? siteUrl.replace(/\/*$/, "/") : `https://${firebaseConfig.projectId || "stepmates"}.web.app/`)
   : location.origin + location.pathname;
 const SRC = { manual: "Typed in", apple: "Apple Health", healthconnect: "Health Connect", walk: "Walk mode", garmin: "Garmin", fitbit: "Fitbit", samsung: "Samsung Health", google: "Google Fit" };
 
@@ -354,14 +354,14 @@ function gateHtml() {
     <h1>StepMates</h1>
     <p class="muted">Walk together. Count together.</p>
     ${pendingLink?.startsWith("#join=") ? `<p class="muted small">Sign in to join your friend's group.</p>` : ""}
-    ${phone.isNative() ? "" : `<button class="btn primary wide" data-act="signin">Sign in with Google</button>
-      <p class="muted small or">or with email</p>`}
+    ${googleSignIn && !phone.isNative() ? `<button class="btn primary wide" data-act="signin">Sign in with Google</button>
+      <p class="muted small or">or with email</p>` : ""}
     <form data-form="auth" class="stack wide">
       ${create ? `<input name="name" placeholder="Your name" autocomplete="name" maxlength="30" required>` : ""}
       <input name="email" type="email" placeholder="Email" autocomplete="email" required>
       <input name="password" type="password" placeholder="Password (6+ characters)" minlength="6"
              autocomplete="${create ? "new-password" : "current-password"}" required>
-      <button class="btn ${phone.isNative() ? "primary" : ""} wide">${create ? "Create account" : "Sign in"}</button>
+      <button class="btn ${googleSignIn && !phone.isNative() ? "" : "primary"} wide">${create ? "Create account" : "Sign in"}</button>
     </form>
     <div class="row links">
       <button class="link" data-act="auth-mode">${create ? "I already have an account" : "Create an account"}</button>

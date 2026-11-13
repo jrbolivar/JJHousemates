@@ -12,3 +12,11 @@ export const firebaseConfig = {
   messagingSenderId: "858962083746",
   appId:             "1:858962083746:web:c542631c3920f171dfbcfb",
 };
+
+// Where the website version lives (used for invite links sent from the phone app).
+// Leave empty to use the Firebase address https://<projectId>.web.app/
+export const siteUrl = "";
+
+// Show "Sign in with Google" on the website. Needs the Google provider enabled in
+// Firebase Authentication and the website's domain added under Authorized domains.
+export const googleSignIn = false;
